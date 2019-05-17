@@ -14,6 +14,7 @@ Node.prototype.visit = function(parent) {
         this.left.visit(this);
     }
 
+    console.log(this.value);
     fill(255);
     noStroke();
     text(this.value, this.x, this.y);

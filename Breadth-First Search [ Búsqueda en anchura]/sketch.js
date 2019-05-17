@@ -47,7 +47,7 @@ function bfs() {
   graph.reset();
 
   var start = graph.setStart(dropdown.value());
-  var end = graph.setEnd("Nicolas Cage");
+  var end = graph.setEnd("Avi Arad");
   
   console.log(graph);
   
