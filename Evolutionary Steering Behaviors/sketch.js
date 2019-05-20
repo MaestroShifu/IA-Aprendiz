@@ -1,41 +1,49 @@
-let v;
-let a;
-let s;
-
-let d = 25;
+var vehicle = [];
+var food = [];
+var poison = [];
 
 function setup() {
     createCanvas(1820, 730);
 
-    v = new Vehicle(width / 2, height / 2);
-    a = new Vehicle(width / 1, height / 1);
-    s = new Vehicle(width / 5, height / 5);
+    //Crear nuevos vehiculos
+    for (let index = 0; index < 10; index++) {
+        vehicle.push(new Vehicle(random(width), random(height)));
+    }
+
+    //Manejo de la comida
+    for (let index = 0; index < 50; index++) {
+        food.push(createVector(random(width), random(height)));
+    }
+
+    //Manejo del veneno
+    for (let index = 0; index < 50; index++) {
+        poison.push(createVector(random(width), random(height)));
+    }
 }
 
 function draw() {
     background(51);
 
-    let mouse = createVector(mouseX, mouseY);
+    //Renderizar la comida
+    for (let index = 0; index < food.length; index++) {
+        fill(0, 255, 0);
+        noStroke();
 
-    //Pintar un circulo en el mouse
-    fill(127);
-    stroke(200);
-    strokeWeight(2);
-    ellipse(mouse.x, mouse.y, 48, 48);
+        ellipse(food[index].x, food[index].y, 8, 8);
+    }
 
+    //Renderizar el veneno
+    for (let index = 0; index < poison.length; index++) {
+        fill(255, 0, 0);
+        noStroke();
 
-    v.boundaries();
-    v.arrive(mouse);
-    v.update();
-    v.display();
+        ellipse(poison[index].x, poison[index].y, 8, 8);
+    }
 
-    a.boundaries();
-    a.arrive(mouse);
-    a.update();
-    a.display();
-
-    s.boundaries();
-    s.arrive(mouse);
-    s.update();
-    s.display();
+    //manejo de los vehiculos
+    for (let index = 0; index < vehicle.length; index++) {
+        vehicle[index].behaviors(food, poison);
+        vehicle[index].update();
+        vehicle[index].display();
+    }
 }
