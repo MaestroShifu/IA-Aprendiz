@@ -1,23 +1,57 @@
-function Vehicle (x, y) {
+// var mutation =  0.01;
+var mutation =  0.1;
+
+function Vehicle (x, y, dna) {
   this.acceleration = createVector(0, 0);
   this.velocity = createVector(0, -2);
   this.position = createVector(x, y);
 
-  this.r = 6;
+  this.r = 4;
   this.maxspeed = 5;
   this.maxforce = 0.5;
 
   this.health = 1;
-
+  
   //Manejo de la IA
   this.dna = [];
-  this.dna[0] = random(5, -5);
-  this.dna[1] = random(5, -5);
+  if(dna === undefined) {
+    // Comida - Peso
+    this.dna[0] = random(2, -2);
+    // Veneno - Peso
+    this.dna[1] = random(2, -2);
+    // Comida - perception 
+    this.dna[2] = random(0, 100);
+    // veneno - perception
+    this.dna[3] = random(0, 100);
+  } else {
+    //Mutacion
+    this.dna[0] = dna[0];
+    if(random(1) < mutation) {
+      this.dna[0] += random(-0.1, 0.1);
+    }
 
-  this.d = 25;//Opcional
+    this.dna[1] = dna[1];
+    if(random(1) < mutation) {
+      this.dna[1] += random(-0.1, 0.1);
+    }
+
+    this.dna[2] = dna[2];
+    if(random(1) < mutation) {
+      this.dna[2] += random(-10, 10);
+    }
+
+    this.dna[3] = dna[3];
+    if(random(1) < mutation) {
+      this.dna[3] += random(-10, 10);
+    }
+  }
+
 }
 
 Vehicle.prototype.update = function() {
+  //Pierde salud
+  this.health -= 0.01;
+
   //Actualizar velocidad
   this.velocity.add(this.acceleration);
 
@@ -50,17 +84,19 @@ Vehicle.prototype.seek = function(target)  {
 
 //Manjea los bordes de salida
 Vehicle.prototype.boundaries = function() {
+  let d = 25;//Opcional
+
   let desired = null;
 
-  if (this.position.x < this.d) {
+  if (this.position.x < d) {
     desired = createVector(this.maxspeed, this.velocity.y);
-  } else if (this.position.x > width - this.d) {
+  } else if (this.position.x > width - d) {
     desired = createVector(-this.maxspeed, this.velocity.y);
   }
 
-  if (this.position.y < this.d) {
+  if (this.position.y < d) {
     desired = createVector(this.velocity.x, this.maxspeed);
-  } else if (this.position.y > height - this.d) {
+  } else if (this.position.y > height - d) {
     desired = createVector(this.velocity.x, -this.maxspeed);
   }
 
@@ -74,8 +110,8 @@ Vehicle.prototype.boundaries = function() {
 }
 
 Vehicle.prototype.behaviors = function(good, bad) {
-  var steerG = this.eat(good);
-  var steerB = this.eat(bad);
+  var steerG = this.eat(good, 0.3, this.dna[2]);
+  var steerB = this.eat(bad, -0.75, this.dna[3]);
 
   steerG.mult(this.dna[0]);
   steerB.mult(this.dna[1]);
@@ -84,27 +120,49 @@ Vehicle.prototype.behaviors = function(good, bad) {
   this.applyForce(steerB);
 }
 
-Vehicle.prototype.eat = function(listData) {
-  var record = Infinity;
-  var closestIndex = -1;
+//Para morir el agente
+Vehicle.prototype.dead = function() {
+  return (this.health < 0);
+}
 
-  for (let index = 0; index < listData.length; index++) {
+//Funcion para comer
+Vehicle.prototype.eat = function(listData, nutrition, perception) {
+  var record = Infinity;
+  var closest = null;
+
+  for (let index = (listData.length - 1); index >= 0; index--) {
     var distanceDifference = this.position.dist(listData[index]);//restamos los puntos para buscar la distancia
 
-    if(distanceDifference < record) {
-      record = distanceDifference;
-
-      closestIndex = index;
+    if(distanceDifference < this.maxspeed) {
+      listData.splice(index, 1);
+  
+      //Manejo de la comida
+      this.health += nutrition;
+    } else {
+      if(distanceDifference < record && distanceDifference < perception) {//-> manejo de la distancia de la comida y de la percepcion (alcance)
+        record = distanceDifference;
+  
+        closest = listData[index];
+      }
     }
+
   }
 
-  if(record < 5) {
-    listData.splice(closestIndex, 1);
-  } else if (closestIndex > -1) {
-    return this.seek(listData[closestIndex]);
+  //Esta comiendo en este momento
+  if (closest != null) {
+    return this.seek(closest);
   }
 
   return createVector(0, 0)
+}
+
+//Se reproduce el agente
+Vehicle.prototype.cloneMe = function() {
+  if(random(1) < 0.005) {
+    return new Vehicle(this.position.x, this.position.y, this.dna);
+  } else {
+    return null;
+  }
 }
 
 //Visualizar el agente
@@ -117,17 +175,32 @@ Vehicle.prototype.display = function() {
   translate(this.position.x, this.position.y);//Sirce para mover la figura
   rotate(angle);//Rota la fiogura
   
-  //Sirve para testear el peso
-  stroke(0, 255, 0);
-  line(0, 0, 0, -this.dna[0] * 50);
-  stroke(255, 0, 0);
-  line(0, 0, 0, -this.dna[1] * 50);
+  //Sirve para testear 
+  if(debug.checked()) {
+    //Comida
+    strokeWeight(3);
+    stroke(0, 255, 0);
+    noFill();
+    line(0, 0, 0, -this.dna[0] * 50);//-> El peso
+    strokeWeight(2);
+    ellipse(0 , 0, this.dna[2] * 2);//-> La precepcion
+  
+    //Veneno
+    stroke(255, 0, 0);
+    line(0, 0, 0, -this.dna[1] * 50);//-> El peso
+    ellipse(0 , 0, this.dna[3] * 2);//-> La precepcion
+  }
+
   
   //Color y relleno
-  fill(127);
-  stroke(200);
+  var green = color(0, 255, 0);
+  var red = color(255, 0, 0);
+  var col = lerpColor(red, green, this.health);//Genera una interpolacion entre colores
+
+  fill(col);
+  stroke(col);
   strokeWeight(1);
-  stroke(255)
+
   //Tipo de contorno
   beginShape();
 
